@@ -54,7 +54,7 @@
     },
     {
       "parameters": {
-        "model": "claude-sonnet-4-20250514",
+        "model": "claude-3-5-sonnet-latest",
         "options": {
           "temperature": 0.3,
           "maxTokensToSample": 1500
@@ -109,7 +109,7 @@
     },
     {
       "parameters": {
-        "model": "claude-sonnet-4-20250514",
+        "model": "claude-3-5-sonnet-latest",
         "options": {
           "temperature": 0.8,
           "maxTokensToSample": 2000
@@ -323,7 +323,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Merge final: combinar el video de CUALQUIER servicio con los datos originales\nconst videoData = $input.first().json;\nconst originalData = $('📝 Parsear Guión').first().json;\n\nreturn [{\n  json: {\n    jobId: originalData.jobId,\n    videoUrl: videoData.videoUrl || videoData.url || 'No URL found',\n    service: videoData.service || 'unknown',\n    producto: originalData.analysis.producto,\n    avatar: originalData.avatar.name,\n    estilo: originalData.styleKey,\n    guion: originalData.script.guion,\n    duracion: originalData.script.duracionEstimada,\n    timestamp: new Date().toISOString(),\n    status: 'completed'\n  }\n}];"
+        "jsCode": "// Merge final: capturar el videoUrl sin importar qué rama (D-ID o HeyGen) lo generó\nconst allInputs = $input.all();\nconst videoInput = allInputs.find(item => item.json.videoUrl)?.json || {};\nconst originalData = $(\"📝 Parsear Guión\").first().json;\n\nreturn [{\n  json: {\n    jobId: originalData.jobId,\n    videoUrl: videoInput.videoUrl || \"No URL found\",\n    service: videoInput.service || \"unknown\",\n    producto: originalData.analysis.producto,\n    avatar: originalData.avatar.name,\n    estilo: originalData.styleKey,\n    guion: originalData.script.guion,\n    duracion: originalData.script.duracionEstimada,\n    timestamp: new Date().toISOString(),\n    status: \"completed\"\n  }\n}];"
       },
       "id": "merge-final",
       "name": "🔗 Merge Final",
@@ -345,14 +345,6 @@
               {
                 "name": "Access-Control-Allow-Origin",
                 "value": "*"
-              },
-              {
-                "name": "Access-Control-Allow-Methods",
-                "value": "POST, OPTIONS"
-              },
-              {
-                "name": "Access-Control-Allow-Headers",
-                "value": "Content-Type"
               }
             ]
           }
@@ -364,24 +356,7 @@
       "typeVersion": 1.1,
       "position": [
         3440,
-        -100
-      ]
-    },
-    {
-      "parameters": {
-        "fromEmail": "={{$env.EMAIL_FROM || 'noreply@iamanos.com'}}",
-        "toEmail": "={{$env.NOTIFICATION_EMAIL || 'tu@email.com'}}",
-        "subject": "=🎬 Video AI Generado: {{ $json.producto }}",
-        "emailType": "html",
-        "html": "=<div style=\"font-family:'Outfit',Arial,sans-serif;max-width:500px;margin:0 auto;padding:24px;background:#0D0D15;color:#F0F0F8;border-radius:16px\">\n  <h2 style=\"background:linear-gradient(135deg,#00F0FF,#8B5CF6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0 0 16px\">🎬 Video Generado con Éxito</h2>\n  <div style=\"background:#1A1A28;padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);margin-bottom:16px\">\n    <p style=\"margin:4px 0;color:#9999B0\">📦 <strong style=\"color:#F0F0F8\">Producto:</strong> {{ $json.producto }}</p>\n    <p style=\"margin:4px 0;color:#9999B0\">🎭 <strong style=\"color:#F0F0F8\">Avatar:</strong> {{ $json.avatar }}</p>\n    <p style=\"margin:4px 0;color:#9999B0\">⏱️ <strong style=\"color:#F0F0F8\">Duración:</strong> {{ $json.duracion }}</p>\n    <p style=\"margin:4px 0;color:#9999B0\">🎨 <strong style=\"color:#F0F0F8\">Estilo:</strong> {{ $json.estilo }}</p>\n  </div>\n  <a href=\"{{ $json.videoUrl }}\" style=\"display:block;text-align:center;padding:14px;background:linear-gradient(135deg,#00F0FF,#8B5CF6);color:#0D0D15;font-weight:700;text-decoration:none;border-radius:12px;font-size:1rem\">⬇️ Descargar Video</a>\n  <div style=\"margin-top:16px;padding:12px;background:#14141F;border-radius:8px\">\n    <p style=\"margin:0;font-size:0.85rem;color:#55556A\">💬 Guión:</p>\n    <p style=\"margin:8px 0 0;font-size:0.9rem;color:#9999B0;line-height:1.6\">{{ $json.guion }}</p>\n  </div>\n  <p style=\"margin-top:16px;text-align:center;font-size:0.75rem;color:#55556A\">Generado por VideoAI · iamanos.com</p>\n</div>"
-      },
-      "id": "email-notify",
-      "name": "📧 Notificar por Email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [
-        3440,
-        100
+        0
       ]
     }
   ],
@@ -563,11 +538,6 @@
         [
           {
             "node": "📤 Responder al Móvil",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "📧 Notificar por Email",
             "type": "main",
             "index": 0
           }

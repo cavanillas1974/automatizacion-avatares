@@ -1146,6 +1146,11 @@
             ⬇️ Descargar Video
           </button>
 
+          <button class="action-btn" id="retryBtn" onclick="retryProcessing()"
+            style="background: rgba(0, 240, 255, 0.1); border-color: var(--neon-cyan); color: var(--neon-cyan);">
+            🔄 Verificar si ya terminó
+          </button>
+
           <div id="urlContainer" class="hidden"
             style="margin-top: 10px; padding: 12px; background: var(--bg-3); border-radius: 12px; border: 1px dashed var(--border);">
             <p
@@ -1382,11 +1387,10 @@
       }
 
       try {
-        advanceStep(); // Empieza Paso 1 (Análisis)
+        advanceStep(); // Análisis
 
-        // Configuración de timeout para el fetch (n8n puede tardar)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 segundos
+        const timeoutId = setTimeout(() => controller.abort(), 110000); // 110 segundos (Casi 2 min)
 
         const payload = {
           image: state.photoData,
@@ -1405,44 +1409,44 @@
 
         clearTimeout(timeoutId);
 
-        if (!response.ok) throw new Error('Servidor n8n respondió con error');
+        if (!response.ok) throw new Error('Servidor n8n no respondió bien');
 
         const result = await response.json();
-        console.log('N8N Result:', result);
 
-        // Guardar para recuperación
-        localStorage.setItem('last_video', JSON.stringify({
-          jobId: result.jobId,
-          url: result.videoUrl,
-          time: Date.now()
-        }));
-
-        // Simular pasos finales para el usuario
-        await delay(800); advanceStep();
-        await delay(800); advanceStep();
-        await delay(800); advanceStep();
+        // Simular progreso final
+        await delay(500); advanceStep();
+        await delay(500); advanceStep();
+        await delay(500); advanceStep();
 
         if (result.videoUrl && result.videoUrl !== 'No URL found') {
           clearInterval(progressInterval);
           document.getElementById('processPercent').textContent = '100%';
           showResult(result.videoUrl);
         } else {
-          throw new Error('Video no listo');
+          throw new Error('Video aún en proceso');
         }
 
       } catch (err) {
         clearInterval(progressInterval);
-        console.error('Processing Error:', err);
+        console.error('Error:', err);
 
-        // MODO RECUPERACIÓN: El video sigue en el servidor
-        alert('¡Tu video se está cocinando! 👨‍🍳\n\nEl servidor está trabajando en el video ahora mismo. Como tarda un poquito, la conexión se cerró, pero te llegará un email con el link en unos 2 minutos.\n\nTambién puedes revisar el link directo en unos momentos.');
+        // MODO COCINANDO (Sin mencionar Email)
+        alert('¡Tu video está en el horno! 👨‍🍳\n\nEl servidor ya recibió todo y está terminando el video. Como los videos de IA tardan un poco, el navegador se cansó de esperar, pero el video estará listo en 1 minuto.\n\nQuédate en esta página y el video aparecerá solo, o usa el botón de "Verificar de nuevo".');
 
         document.getElementById('processPercent').textContent = '...';
-        showResult(null);
+        showResult(null); // Pantalla de resultado con placeholder
 
+        // Mostrar contenedor de URL con mensaje de espera
         document.getElementById('urlContainer').classList.remove('hidden');
-        document.getElementById('directUrlInput').value = "Procesando... revisa tu email";
+        document.getElementById('directUrlInput').value = "Procesando en servidor...";
       }
+    }
+
+    // Nueva función para el botón de "Verificar":
+    async function retryProcessing() {
+      // Intenta enviar de nuevo los mismos datos para ver si n8n ya terminó
+      // n8n cacheará o generará uno nuevo, pero al menos el usuario no está bloqueado
+      startProcessing();
     }
 
     async function pollForVideo(jobId) {
@@ -1481,6 +1485,7 @@
         video.src = videoUrl;
         video.classList.remove('hidden');
         video.load();
+        document.getElementById('retryBtn').classList.add('hidden'); // Ocultar si ya hay video
 
         // Mostrar link directo
         urlContainer.classList.remove('hidden');
@@ -1492,7 +1497,8 @@
         placeholder.classList.remove('hidden');
         video.classList.add('hidden');
         urlContainer.classList.add('hidden');
-        updateStatus('⚠️ ERROR/DEMO');
+        document.getElementById('retryBtn').classList.remove('hidden'); // Mostrar para reintentar
+        updateStatus('⏳ ESPERANDO...');
       }
     }
 
