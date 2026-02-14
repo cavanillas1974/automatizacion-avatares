@@ -1,0 +1,20 @@
+{
+  "name": "VideoAI - Genera Videos con IA",
+  "short_name": "VideoAI",
+  "description": "Toma una foto de tu producto y genera un video con avatar IA hablando de él",
+  "start_url": "/video-ai-app.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#06060B",
+  "theme_color": "#06060B",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2306060B' width='100' height='100' rx='20'/><text y='65' x='18' font-size='55'>🎬</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "es-MX"
+}
