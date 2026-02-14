@@ -1261,26 +1261,21 @@
       const video = document.getElementById('videoFeed');
       const canvas = document.getElementById('photoCanvas');
 
-      // Redimensionar para optimizar envío a n8n (Max 1024px)
+      // Redimensionar para que n8n vuele (Max 800px)
       let width = video.videoWidth;
       let height = video.videoHeight;
-      const MAX_SIZE = 1024;
+      const MAX_SIZE = 800;
 
-      if (width > height) {
-        if (width > MAX_SIZE) {
-          height = height * (MAX_SIZE / width);
-          width = MAX_SIZE;
-        }
-      } else {
-        if (height > MAX_SIZE) {
-          width = width * (MAX_SIZE / height);
-          height = MAX_SIZE;
-        }
+      if (width > height && width > MAX_SIZE) {
+        height *= (MAX_SIZE / width);
+        width = MAX_SIZE;
+      } else if (height > MAX_SIZE) {
+        width *= (MAX_SIZE / height);
+        height = MAX_SIZE;
       }
 
       canvas.width = width;
       canvas.height = height;
-
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, width, height);
 
@@ -1376,84 +1371,76 @@
       }, 1000);
 
       function advanceStep() {
-        if (currentStep > 0) {
-          document.getElementById(steps[currentStep - 1]).classList.remove('active');
-          document.getElementById(steps[currentStep - 1]).classList.add('done');
-        }
         if (currentStep < steps.length) {
+          if (currentStep > 0) {
+            document.getElementById(steps[currentStep - 1]).classList.remove('active');
+            document.getElementById(steps[currentStep - 1]).classList.add('done');
+          }
           document.getElementById(steps[currentStep]).classList.add('active');
           currentStep++;
         }
       }
 
       try {
-        // Step 1: Send photo to N8N
-        advanceStep();
+        advanceStep(); // Empieza Paso 1 (Análisis)
+
+        // Configuración de timeout para el fetch (n8n puede tardar)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 segundos
 
         const payload = {
           image: state.photoData,
           avatar: state.selectedAvatar,
           voice: state.selectedVoice,
           style: state.selectedStyle,
-          timestamp: new Date().toISOString(),
-          device: navigator.userAgent
+          timestamp: new Date().toISOString()
         };
 
         const response = await fetch(CONFIG.N8N_WEBHOOK_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          signal: controller.signal
         });
 
-        if (!response.ok) throw new Error('Error en servidor: ' + response.status);
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error('Servidor n8n respondió con error');
 
         const result = await response.json();
-        console.log('N8N Response:', result);
+        console.log('N8N Result:', result);
 
-        // Guardar metadata en localStorage para recuperación
-        const jobData = {
-          jobId: result.jobId || state.jobId || 'pending',
-          timestamp: Date.now(),
-          producto: state.photoData.substring(0, 100), // mini referencia
-          status: 'processing'
-        };
-        localStorage.setItem('last_video_job', JSON.stringify(jobData));
+        // Guardar para recuperación
+        localStorage.setItem('last_video', JSON.stringify({
+          jobId: result.jobId,
+          url: result.videoUrl,
+          time: Date.now()
+        }));
 
-        // Simulate step progression for UX
-        await delay(1000); advanceStep(); // Step 2 (Analizado)
-        await delay(1000); advanceStep(); // Step 3 (Audio)
-        await delay(1000); advanceStep(); // Step 4 (Video)
+        // Simular pasos finales para el usuario
+        await delay(800); advanceStep();
+        await delay(800); advanceStep();
+        await delay(800); advanceStep();
 
-        // Check if we got a video URL directly
-        if (result.videoUrl) {
-          jobData.status = 'completed';
-          jobData.videoUrl = result.videoUrl;
-          localStorage.setItem('last_video_job', JSON.stringify(jobData));
-
+        if (result.videoUrl && result.videoUrl !== 'No URL found') {
           clearInterval(progressInterval);
           document.getElementById('processPercent').textContent = '100%';
-          await delay(500);
           showResult(result.videoUrl);
         } else {
-          // Si el workflow es lento, n8n puede no haber terminado aún
-          // Pero si el server respondió exitosamente sin URL, algo raro pasa
-          console.warn('No video URL found in success response');
-          throw new Error('El servidor no devolvió el link del video aún.');
+          throw new Error('Video no listo');
         }
 
       } catch (err) {
         clearInterval(progressInterval);
-        console.error('Error fetching video:', err);
+        console.error('Processing Error:', err);
 
-        // RECUPERACIÓN: Si falló, avisar al usuario
-        alert('El proceso ha sido enviado con éxito, pero la conexión se interrumpió o está tardando mucho. \n\n¡No te preocupes por tus créditos! El video se está generando en el servidor y te llegará por email. También puedes intentar refrescar esta página en 1-2 minutos.');
+        // MODO RECUPERACIÓN: El video sigue en el servidor
+        alert('¡Tu video se está cocinando! 👨‍🍳\n\nEl servidor está trabajando en el video ahora mismo. Como tarda un poquito, la conexión se cerró, pero te llegará un email con el link en unos 2 minutos.\n\nTambién puedes revisar el link directo en unos momentos.');
 
         document.getElementById('processPercent').textContent = '...';
-        showResult(null); // Mostrará el cuadro de link directo vacío
+        showResult(null);
 
-        // Permitir ver el link directo si se actualiza más tarde
-        const urlContainer = document.getElementById('urlContainer');
-        urlContainer.classList.remove('hidden');
+        document.getElementById('urlContainer').classList.remove('hidden');
         document.getElementById('directUrlInput').value = "Procesando... revisa tu email";
       }
     }

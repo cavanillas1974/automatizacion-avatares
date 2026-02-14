@@ -323,7 +323,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Merge final: combinar resultado del servicio con datos originales\nconst videoResult = $input.first().json;\nconst originalData = $('📝 Parsear Guión').first().json;\n\nreturn [{\n  json: {\n    jobId: originalData.jobId,\n    videoUrl: videoResult.videoUrl,\n    service: videoResult.service,\n    producto: originalData.analysis.producto,\n    avatar: originalData.avatar.name,\n    estilo: originalData.styleKey,\n    guion: originalData.script.guion,\n    duracion: originalData.script.duracionEstimada,\n    timestamp: new Date().toISOString(),\n    status: 'completed'\n  }\n}];"
+        "jsCode": "// Merge final: combinar el video de CUALQUIER servicio con los datos originales\nconst videoData = $input.first().json;\nconst originalData = $('📝 Parsear Guión').first().json;\n\nreturn [{\n  json: {\n    jobId: originalData.jobId,\n    videoUrl: videoData.videoUrl || videoData.url || 'No URL found',\n    service: videoData.service || 'unknown',\n    producto: originalData.analysis.producto,\n    avatar: originalData.avatar.name,\n    estilo: originalData.styleKey,\n    guion: originalData.script.guion,\n    duracion: originalData.script.duracionEstimada,\n    timestamp: new Date().toISOString(),\n    status: 'completed'\n  }\n}];"
       },
       "id": "merge-final",
       "name": "🔗 Merge Final",
