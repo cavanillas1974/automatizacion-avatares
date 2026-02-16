@@ -1180,8 +1180,8 @@
     // CONFIGURATION
     // ============================
     const CONFIG = {
-      // 🔧 URL CONFIGURADA AUTOMÁTICAMENTE
-      N8N_WEBHOOK_URL: 'https://n8n.srv1155300.hstgr.cloud/webhook-test/video-ai-product',
+      // 🔧 URL CONFIGURADA AUTOMÁTICAMENTE (Producción)
+      N8N_WEBHOOK_URL: 'https://n8n.srv1155300.hstgr.cloud/webhook/video-ai-product',
       // Tiempo de polling para verificar si el video está listo (ms)
       POLL_INTERVAL: 5000,
       MAX_POLL_ATTEMPTS: 60, // 5 min máximo
@@ -1390,7 +1390,7 @@
         advanceStep(); // Análisis
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 110000); // 110 segundos (Casi 2 min)
+        const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 segundos (5 min) para dar tiempo a HeyGen/D-ID
 
         const payload = {
           image: state.photoData,
@@ -1442,28 +1442,10 @@
       }
     }
 
-    // Nueva función para el botón de "Verificar":
+    // Reintentar: re-envía la solicitud completa a N8N.
+    // NOTA: Esto genera un nuevo video (consume créditos de las APIs).
     async function retryProcessing() {
-      // Intenta enviar de nuevo los mismos datos para ver si n8n ya terminó
-      // n8n cacheará o generará uno nuevo, pero al menos el usuario no está bloqueado
       startProcessing();
-    }
-
-    async function pollForVideo(jobId) {
-      let attempts = 0;
-      while (attempts < CONFIG.MAX_POLL_ATTEMPTS) {
-        try {
-          const res = await fetch(`${CONFIG.N8N_WEBHOOK_URL}/status/${jobId}`);
-          const data = await res.json();
-          if (data.status === 'completed' && data.videoUrl) {
-            showResult(data.videoUrl);
-            return;
-          }
-        } catch (e) { }
-        await delay(CONFIG.POLL_INTERVAL);
-        attempts++;
-      }
-      showResult(null);
     }
 
     function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
