@@ -243,7 +243,7 @@
           "conditions": [
             {
               "id": "use-did",
-              "leftValue": "heygen",
+              "leftValue": "={{ $env.VIDEO_SERVICE }}",
               "rightValue": "did",
               "operator": {
                 "type": "string",
@@ -264,379 +264,379 @@
       ]
     },
     {
-        "parameters": {
-          "method": "POST",
-          "url": "https://api.d-id.com/audios",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "httpHeaderAuth",
-          "sendBody": true,
-          "contentType": "multipart-form-data",
-          "bodyParameters": {
-            "parameters": [
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.d-id.com/audios",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "audio",
+              "parameterType": "formBinaryData",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "did-upload-audio",
+      "name": "📤 D-ID: Subir Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2440,
+        -120
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DID_CREDENTIAL_ID",
+          "name": "D-ID API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.d-id.com/talks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"script\": {\n    \"type\": \"audio\",\n    \"audio_url\": \"{{ $json.url }}\"\n  },\n  \"source_url\": {{ JSON.stringify($('🎬 Preparar para Avatar').first().json.avatar.did_image_url) }},\n  \"config\": {\n    \"fluent\": true,\n    \"pad_audio\": 0.5,\n    \"stitch\": true\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "did-create-talk",
+      "name": "🎭 D-ID: Crear Video Avatar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2720,
+        -120
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DID_CREDENTIAL_ID",
+          "name": "D-ID API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Polling D-ID hasta que el video esté listo\nconst talkId = $input.first().json.id;\nif (!talkId) {\n  throw new Error('D-ID no retornó un talk ID. Respuesta: ' + JSON.stringify($input.first().json).substring(0, 500));\n}\n\nconst apiKey = $env.DID_API_KEY;\nif (!apiKey) {\n  throw new Error('Variable de entorno DID_API_KEY no configurada. Agrégala en Settings → Variables.');\n}\n\nconst maxAttempts = 30;\nlet videoUrl = null;\n\nfor (let attempt = 1; attempt <= maxAttempts; attempt++) {\n  const response = await fetch(`https://api.d-id.com/talks/${talkId}`, {\n    headers: {\n      'Authorization': `Basic ${apiKey}`,\n      'Content-Type': 'application/json'\n    }\n  });\n\n  if (!response.ok) {\n    const errorText = await response.text();\n    throw new Error(`D-ID polling HTTP ${response.status}: ${errorText.substring(0, 300)}`);\n  }\n\n  const data = await response.json();\n\n  if (data.status === 'done' && data.result_url) {\n    videoUrl = data.result_url;\n    break;\n  } else if (data.status === 'error') {\n    throw new Error(`D-ID error: ${data.error?.description || JSON.stringify(data).substring(0, 300)}`);\n  }\n\n  await new Promise(r => setTimeout(r, 5000));\n}\n\nif (!videoUrl) {\n  throw new Error('Timeout: D-ID no generó el video en 150 segundos.');\n}\n\nreturn [{ json: { videoUrl, service: 'd-id', talkId } }];"
+      },
+      "id": "did-poll-status",
+      "name": "⏳ D-ID: Esperar Video",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.heygen.com/v2/video/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"video_inputs\": [\n    {\n      \"character\": {\n        \"type\": \"avatar\",\n        \"avatar_id\": {{ JSON.stringify($('🎬 Preparar para Avatar').first().json.avatar.heygen_avatar_id) }},\n        \"avatar_style\": \"normal\"\n      },\n      \"voice\": {\n        \"type\": \"text\",\n        \"input_text\": {{ JSON.stringify($('🎬 Preparar para Avatar').first().json.script.guion) }},\n        \"voice_id\": {{ JSON.stringify($('🎬 Preparar para Avatar').first().json.voice.heygen_id) }}\n      }\n    }\n  ],\n  \"dimension\": {\n    \"width\": 1080,\n    \"height\": 1920\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "heygen-create-video",
+      "name": "🎭 HeyGen: Crear Video Avatar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2720,
+        120
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "40GgxTuboKt204IP",
+          "name": "HeyGen API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Polling HeyGen hasta que el video esté listo\nconst responseData = $input.first().json;\nconst videoId = responseData.data?.video_id;\nif (!videoId) {\n  throw new Error('HeyGen no retornó video_id. Respuesta: ' + JSON.stringify(responseData).substring(0, 500));\n}\n\nconst apiKey = $env.HEYGEN_API_KEY;\n\nconst maxAttempts = 60;\nlet videoUrl = null;\n\nfor (let attempt = 1; attempt <= maxAttempts; attempt++) {\n  const response = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${videoId}`, {\n    headers: {\n      'X-Api-Key': apiKey\n    }\n  });\n\n  if (!response.ok) {\n    const errorText = await response.text();\n    throw new Error(`HeyGen polling HTTP ${response.status}: ${errorText.substring(0, 300)}`);\n  }\n\n  const data = await response.json();\n\n  if (data.data?.status === 'completed' && data.data?.video_url) {\n    videoUrl = data.data.video_url;\n    break;\n  } else if (data.data?.status === 'failed') {\n    throw new Error(`HeyGen error: ${data.data?.error || JSON.stringify(data).substring(0, 300)}`);\n  }\n\n  await new Promise(r => setTimeout(r, 5000));\n}\n\nif (!videoUrl) {\n  throw new Error('Timeout: HeyGen no generó el video en 300 segundos.');\n}\n\nreturn [{ json: { videoUrl, service: 'heygen', videoId } }];"
+      },
+      "id": "heygen-poll-status",
+      "name": "⏳ HeyGen: Esperar Video",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge final: tomar videoUrl de la rama que ejecutó (D-ID o HeyGen)\nconst videoData = $input.first().json;\nconst originalData = $('🎬 Preparar para Avatar').first().json;\n\nreturn [{\n  json: {\n    jobId: originalData.jobId,\n    videoUrl: videoData.videoUrl || 'No URL found',\n    service: videoData.service || 'unknown',\n    producto: originalData.analysis?.producto || 'Producto',\n    avatar: originalData.avatar?.name || 'Avatar',\n    estilo: originalData.styleKey || 'comercial',\n    guion: originalData.script?.guion || '',\n    duracion: originalData.script?.duracionEstimada || '',\n    timestamp: new Date().toISOString(),\n    status: 'completed'\n  }\n}];"
+      },
+      "id": "merge-final",
+      "name": "🔗 Merge Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, jobId: $json.jobId, videoUrl: $json.videoUrl, producto: $json.producto, avatar: $json.avatar, guion: $json.guion, status: $json.status }) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
               {
-                "name": "audio",
-                "parameterType": "formBinaryData",
-                "inputDataFieldName": "data"
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
               }
             ]
-          },
-          "options": {}
-        },
-        "id": "did-upload-audio",
-        "name": "📤 D-ID: Subir Audio",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2440,
-          -120
-        ],
-        "credentials": {
-          "httpHeaderAuth": {
-            "id": "DID_CREDENTIAL_ID",
-            "name": "D-ID API"
           }
         }
       },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "https://api.d-id.com/talks",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "httpHeaderAuth",
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={\n  \"script\": {\n    \"type\": \"audio\",\n    \"audio_url\": \"{{ $json.url }}\"\n  },\n  \"source_url\": {{ JSON.stringify($('🎬 Preparar para Avatar').first().json.avatar.did_image_url) }},\n  \"config\": {\n    \"fluent\": true,\n    \"pad_audio\": 0.5,\n    \"stitch\": true\n  }\n}",
-          "options": {
-            "response": {
-              "response": {
-                "responseFormat": "json"
-              }
-            },
-            "timeout": 60000
+      "id": "webhook-response",
+      "name": "📤 Responder al Móvil",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "📱 Recibir Foto (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Validar y Configurar",
+            "type": "main",
+            "index": 0
           }
-        },
-        "id": "did-create-talk",
-        "name": "🎭 D-ID: Crear Video Avatar",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2720,
-          -120
-        ],
-        "credentials": {
-          "httpHeaderAuth": {
-            "id": "DID_CREDENTIAL_ID",
-            "name": "D-ID API"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "jsCode": "// Polling D-ID hasta que el video esté listo\nconst talkId = $input.first().json.id;\nif (!talkId) {\n  throw new Error('D-ID no retornó un talk ID. Respuesta: ' + JSON.stringify($input.first().json).substring(0, 500));\n}\n\nconst apiKey = $env.DID_API_KEY;\nif (!apiKey) {\n  throw new Error('Variable de entorno DID_API_KEY no configurada. Agrégala en Settings → Variables.');\n}\n\nconst maxAttempts = 30;\nlet videoUrl = null;\n\nfor (let attempt = 1; attempt <= maxAttempts; attempt++) {\n  const response = await fetch(`https://api.d-id.com/talks/${talkId}`, {\n    headers: {\n      'Authorization': `Basic ${apiKey}`,\n      'Content-Type': 'application/json'\n    }\n  });\n\n  if (!response.ok) {\n    const errorText = await response.text();\n    throw new Error(`D-ID polling HTTP ${response.status}: ${errorText.substring(0, 300)}`);\n  }\n\n  const data = await response.json();\n\n  if (data.status === 'done' && data.result_url) {\n    videoUrl = data.result_url;\n    break;\n  } else if (data.status === 'error') {\n    throw new Error(`D-ID error: ${data.error?.description || JSON.stringify(data).substring(0, 300)}`);\n  }\n\n  await new Promise(r => setTimeout(r, 5000));\n}\n\nif (!videoUrl) {\n  throw new Error('Timeout: D-ID no generó el video en 150 segundos.');\n}\n\nreturn [{ json: { videoUrl, service: 'd-id', talkId } }];"
-        },
-        "id": "did-poll-status",
-        "name": "⏳ D-ID: Esperar Video",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          2960,
-          -120
         ]
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "https://api.heygen.com/v2/video/generate",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "httpHeaderAuth",
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={\n  \"video_inputs\": [\n    {\n      \"character\": {\n        \"type\": \"avatar\",\n        \"avatar_id\": {{ JSON.stringify($('🎬 Preparar para Avatar').first().json.avatar.heygen_avatar_id) }},\n        \"avatar_style\": \"normal\"\n      },\n      \"voice\": {\n        \"type\": \"text\",\n        \"input_text\": {{ JSON.stringify($('🎬 Preparar para Avatar').first().json.script.guion) }},\n        \"voice_id\": {{ JSON.stringify($('🎬 Preparar para Avatar').first().json.voice.heygen_id) }}\n      }\n    }\n  ],\n  \"dimension\": {\n    \"width\": 1080,\n    \"height\": 1920\n  }\n}",
-          "options": {
-            "response": {
-              "response": {
-                "responseFormat": "json"
-              }
-            },
-            "timeout": 30000
-          }
-        },
-        "id": "heygen-create-video",
-        "name": "🎭 HeyGen: Crear Video Avatar",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2720,
-          120
-        ],
-        "credentials": {
-          "httpHeaderAuth": {
-            "id": "40GgxTuboKt204IP",
-            "name": "HeyGen API"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "jsCode": "// Polling HeyGen hasta que el video esté listo\nconst responseData = $input.first().json;\nconst videoId = responseData.data?.video_id;\nif (!videoId) {\n  throw new Error('HeyGen no retornó video_id. Respuesta: ' + JSON.stringify(responseData).substring(0, 500));\n}\n\nconst apiKey = 'sk_V2_hgu_kP6rz6wz5GK_NNGDAotUHQU7UliQZW0q13vjXKbHH1fn';\n\nconst maxAttempts = 60;\nlet videoUrl = null;\n\nfor (let attempt = 1; attempt <= maxAttempts; attempt++) {\n  const response = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${videoId}`, {\n    headers: {\n      'X-Api-Key': apiKey\n    }\n  });\n\n  if (!response.ok) {\n    const errorText = await response.text();\n    throw new Error(`HeyGen polling HTTP ${response.status}: ${errorText.substring(0, 300)}`);\n  }\n\n  const data = await response.json();\n\n  if (data.data?.status === 'completed' && data.data?.video_url) {\n    videoUrl = data.data.video_url;\n    break;\n  } else if (data.data?.status === 'failed') {\n    throw new Error(`HeyGen error: ${data.data?.error || JSON.stringify(data).substring(0, 300)}`);\n  }\n\n  await new Promise(r => setTimeout(r, 5000));\n}\n\nif (!videoUrl) {\n  throw new Error('Timeout: HeyGen no generó el video en 300 segundos.');\n}\n\nreturn [{ json: { videoUrl, service: 'heygen', videoId } }];"
-        },
-        "id": "heygen-poll-status",
-        "name": "⏳ HeyGen: Esperar Video",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          2960,
-          120
-        ]
-      },
-      {
-        "parameters": {
-          "jsCode": "// Merge final: tomar videoUrl de la rama que ejecutó (D-ID o HeyGen)\nconst videoData = $input.first().json;\nconst originalData = $('🎬 Preparar para Avatar').first().json;\n\nreturn [{\n  json: {\n    jobId: originalData.jobId,\n    videoUrl: videoData.videoUrl || 'No URL found',\n    service: videoData.service || 'unknown',\n    producto: originalData.analysis?.producto || 'Producto',\n    avatar: originalData.avatar?.name || 'Avatar',\n    estilo: originalData.styleKey || 'comercial',\n    guion: originalData.script?.guion || '',\n    duracion: originalData.script?.duracionEstimada || '',\n    timestamp: new Date().toISOString(),\n    status: 'completed'\n  }\n}];"
-        },
-        "id": "merge-final",
-        "name": "🔗 Merge Final",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          3200,
-          0
-        ]
-      },
-      {
-        "parameters": {
-          "respondWith": "json",
-          "responseBody": "={{ JSON.stringify({ success: true, jobId: $json.jobId, videoUrl: $json.videoUrl, producto: $json.producto, avatar: $json.avatar, guion: $json.guion, status: $json.status }) }}",
-          "options": {
-            "responseCode": 200,
-            "responseHeaders": {
-              "entries": [
-                {
-                  "name": "Access-Control-Allow-Origin",
-                  "value": "*"
-                }
-              ]
-            }
-          }
-        },
-        "id": "webhook-response",
-        "name": "📤 Responder al Móvil",
-        "type": "n8n-nodes-base.respondToWebhook",
-        "typeVersion": 1.1,
-        "position": [
-          3440,
-          0
-        ]
-      }
-    ],
-    "connections": {
-      "📱 Recibir Foto (Webhook)": {
-        "main": [
-          [
-            {
-              "node": "⚙️ Validar y Configurar",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "⚙️ Validar y Configurar": {
-        "main": [
-          [
-            {
-              "node": "🔬 Preparar Request Vision",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔬 Preparar Request Vision": {
-        "main": [
-          [
-            {
-              "node": "🔍 Claude Vision API",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔍 Claude Vision API": {
-        "main": [
-          [
-            {
-              "node": "📊 Parsear Análisis",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📊 Parsear Análisis": {
-        "main": [
-          [
-            {
-              "node": "🔬 Preparar Request Guión",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔬 Preparar Request Guión": {
-        "main": [
-          [
-            {
-              "node": "✍️ Claude Guión API",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "✍️ Claude Guión API": {
-        "main": [
-          [
-            {
-              "node": "📝 Parsear Guión",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📝 Parsear Guión": {
-        "main": [
-          [
-            {
-              "node": "🎙️ ElevenLabs: Generar Audio",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🎙️ ElevenLabs: Generar Audio": {
-        "main": [
-          [
-            {
-              "node": "🎬 Preparar para Avatar",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🎬 Preparar para Avatar": {
-        "main": [
-          [
-            {
-              "node": "🔀 ¿D-ID o HeyGen?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔀 ¿D-ID o HeyGen?": {
-        "main": [
-          [
-            {
-              "node": "🎭 D-ID: Crear Video Avatar",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "🎭 HeyGen: Crear Video Avatar",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🎭 D-ID: Crear Video Avatar": {
-        "main": [
-          [
-            {
-              "node": "⏳ D-ID: Esperar Video",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "⏳ D-ID: Esperar Video": {
-        "main": [
-          [
-            {
-              "node": "🔗 Merge Final",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🎭 HeyGen: Crear Video Avatar": {
-        "main": [
-          [
-            {
-              "node": "⏳ HeyGen: Esperar Video",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "⏳ HeyGen: Esperar Video": {
-        "main": [
-          [
-            {
-              "node": "🔗 Merge Final",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔗 Merge Final": {
-        "main": [
-          [
-            {
-              "node": "📤 Responder al Móvil",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      }
+      ]
     },
-    "settings": {
-      "executionOrder": "v1",
-      "saveManualExecutions": true,
-      "callerPolicy": "workflowsFromSameOwner",
-      "errorWorkflow": ""
+    "⚙️ Validar y Configurar": {
+      "main": [
+        [
+          {
+            "node": "🔬 Preparar Request Vision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "staticData": null,
-    "tags": [
-      {
-        "name": "Video AI",
-        "id": "1"
-      },
-      {
-        "name": "Avatar",
-        "id": "2"
-      },
-      {
-        "name": "Product",
-        "id": "3"
-      },
-      {
-        "name": "Mobile",
-        "id": "4"
-      }
-    ],
-    "pinData": {}
-  }
+    "🔬 Preparar Request Vision": {
+      "main": [
+        [
+          {
+            "node": "🔍 Claude Vision API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Claude Vision API": {
+      "main": [
+        [
+          {
+            "node": "📊 Parsear Análisis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Parsear Análisis": {
+      "main": [
+        [
+          {
+            "node": "🔬 Preparar Request Guión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔬 Preparar Request Guión": {
+      "main": [
+        [
+          {
+            "node": "✍️ Claude Guión API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✍️ Claude Guión API": {
+      "main": [
+        [
+          {
+            "node": "📝 Parsear Guión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Parsear Guión": {
+      "main": [
+        [
+          {
+            "node": "🎙️ ElevenLabs: Generar Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎙️ ElevenLabs: Generar Audio": {
+      "main": [
+        [
+          {
+            "node": "🎬 Preparar para Avatar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎬 Preparar para Avatar": {
+      "main": [
+        [
+          {
+            "node": "🔀 ¿D-ID o HeyGen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 ¿D-ID o HeyGen?": {
+      "main": [
+        [
+          {
+            "node": "🎭 D-ID: Crear Video Avatar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🎭 HeyGen: Crear Video Avatar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎭 D-ID: Crear Video Avatar": {
+      "main": [
+        [
+          {
+            "node": "⏳ D-ID: Esperar Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ D-ID: Esperar Video": {
+      "main": [
+        [
+          {
+            "node": "🔗 Merge Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎭 HeyGen: Crear Video Avatar": {
+      "main": [
+        [
+          {
+            "node": "⏳ HeyGen: Esperar Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ HeyGen: Esperar Video": {
+      "main": [
+        [
+          {
+            "node": "🔗 Merge Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Merge Final": {
+      "main": [
+        [
+          {
+            "node": "📤 Responder al Móvil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Video AI",
+      "id": "1"
+    },
+    {
+      "name": "Avatar",
+      "id": "2"
+    },
+    {
+      "name": "Product",
+      "id": "3"
+    },
+    {
+      "name": "Mobile",
+      "id": "4"
+    }
+  ],
+  "pinData": {}
+}
